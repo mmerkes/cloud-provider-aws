@@ -4850,6 +4850,8 @@ func (c *Cloud) EnsureLoadBalancerDeleted(ctx context.Context, clusterName strin
 		// Loop through and try to delete them
 		timeoutAt := time.Now().Add(time.Second * 600)
 		for {
+			// Define the error here to make the last error accessible outside of loop
+			var err error
 			for securityGroupID := range securityGroupIDs {
 				request := &ec2.DeleteSecurityGroupInput{}
 				request.GroupId = &securityGroupID
@@ -4876,6 +4878,12 @@ func (c *Cloud) EnsureLoadBalancerDeleted(ctx context.Context, clusterName strin
 			}
 
 			if time.Now().After(timeoutAt) {
+				// If err is set and we've been ignoring it, it means that at least one security group can't be deleted due to
+				// a dependency violation. Log the error messages here so that we know what resource is not getting cleaned up.
+				if err != nil {
+					klog.Errorf("Failed to clean up security groups within the time alloted: %v", err)
+				}
+
 				ids := []string{}
 				for id := range securityGroupIDs {
 					ids = append(ids, id)
