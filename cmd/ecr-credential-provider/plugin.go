@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/klog/v2"
 	"k8s.io/kubelet/pkg/apis/credentialprovider/install"
 	"k8s.io/kubelet/pkg/apis/credentialprovider/v1"
 )
@@ -62,7 +63,11 @@ func NewCredentialProvider(plugin CredentialProvider) *ExecPlugin {
 // The CredentialProviderResponse, containing the username/password required for pulling
 // the provided image, will be sent back to the kubelet via stdout.
 func (e *ExecPlugin) Run(ctx context.Context) error {
-	return e.runPlugin(ctx, os.Stdin, os.Stdout, os.Args[1:])
+	err := e.runPlugin(ctx, os.Stdin, os.Stdout, os.Args[1:])
+	if err != nil {
+		klog.Errorf("Error running credential provider plugin: %v", err)
+	}
+	return err
 }
 
 func (e *ExecPlugin) runPlugin(ctx context.Context, r io.Reader, w io.Writer, args []string) error {
